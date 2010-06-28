@@ -1,11 +1,14 @@
-def ruby_files base_path, path, &block
-  location = Required.new(base_path, path).location
-  files = []
-  FileUtils.cd location do
-    files = FileList.new('**/*.rb') 
+def ruby_files base_path, path, options = {}, &block
+  required = Required.new(base_path, path)
+  files = []       
+  dir = File.dirname path
+  FileUtils.cd dir do             
+    glob = Required.glob(options)
+    files = FileList.new(glob) 
     Required.extend_files(files).extend(FileString)
     files.select_ruby_files!
-  end 
+    files.prefix_with_path! required.location
+  end
   if block
     block.arity < 1 ? files.instance_eval(&block) : block.call(files)
   else
@@ -17,7 +20,19 @@ class Required
   attr_accessor :location
   
   def initialize base_path, path
-    @location = File.dirname(relative_path(base_path, path))
+    rel_path = relative_path(base_path, path)
+    @location = File.dirname(rel_path) 
+  end
+
+  def self.glob options
+    case options[:recursive]
+    when :full
+      '**/*.rb'    
+    when :single
+      '*/*.rb'
+    else
+      '*.rb'
+    end
   end
   
   def self.extend_files files
@@ -27,19 +42,25 @@ class Required
   
   protected
 
-  def relative_path base_path, path    
-    last_part_path = path.gsub /(.*?)#{Regexp.escape(base_path)}(.*?)/, '\2'  
-    last_part_path.split('/').reject {|f| f == ""}.join('/')    
+  def relative_path base_path, path 
+    last_part_path = path.gsub /(\S*?)#{Regexp.escape(base_path)}\/(.*?)/, '\2'
+    File.join(base_path, last_part_path)
   end
   
 end  
 
 module FileListExtension
 
+  def prefix_with_path! location                      
+    
+    self.map! do |f| 
+      File.join(location, f).extend(FileString) 
+    end
+    self          
+  end
+
   def require! mode = :require
-    iterate_all do |f|
-      f.handle_file mode
-    end       
+    self.each{|f| f.handle_file mode}      
   end
 
   def require_files mode = nil
@@ -69,14 +90,7 @@ module FileListExtension
     end
     self
   end
-
-     
-  protected
-
-  def iterate_all
-    self.each{|f| yield f}    
-  end
-  
+      
 end
 
 module FileString  
