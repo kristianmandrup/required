@@ -142,6 +142,17 @@ ruby_files('lib', __FILE__).except('except_me', 'except_also_me').strip_file_ext
 ==> 'project/report/basic' loaded into Ruby and executed (using Ruby Kernel 'load' statement)
 </pre>
 
+## output to StringIO
+
+<pre>
+out = StringIO.new  
+ruby_files('lib', __FILE__, :stdout => out).strip_file_ext :display => :load
+out.rewind
+puts out.read
+==> PRINTS "load 'project/report/basic'\n" to STDOUT
+
+</pre>
+
 ## Note on Patches/Pull Requests
  
 * Fork the project.
