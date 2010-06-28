@@ -4,7 +4,7 @@ require 'rake'
 begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
-    gem.name = "required"
+    gem.name = "require-dsl"
     gem.summary = %Q{DSL to facilitate require/load of ruby files and folders}
     gem.description = %Q{DSL to facilitate require/load of ruby files and folders}
     gem.email = "kmandrup@gmail.com"
