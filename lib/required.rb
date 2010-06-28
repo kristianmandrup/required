@@ -1,5 +1,7 @@
 def ruby_files base_path, path, options = {}, &block
   required = Required.new(base_path, path)
+  orig_stdout = $stdout  
+  $stdout = options[:stdout] if options[:stdout] 
   files = []       
   dir = File.dirname path
   FileUtils.cd dir do |dir|            
@@ -10,10 +12,10 @@ def ruby_files base_path, path, options = {}, &block
     files.prefix_with_path! required.location
   end
   if block
-    block.arity < 1 ? files.instance_eval(&block) : block.call(files)
-  else
-    files
-  end    
+    files = block.arity < 1 ? files.instance_eval(&block) : block.call(files)
+  end
+  $stdout = orig_stdout
+  files
 end
 
 class Required
@@ -67,14 +69,10 @@ module FileListExtension
     self          
   end
 
-  def require! mode = :require
-    self.each{|f| f.handle_file mode}      
-  end
-
-  def require_files mode = nil
+  def strip_file_ext mode = nil
     self.map!{|f| f.remove_rb }
     if mode
-      self.require! mode
+      self.action mode
     else
       self
     end
@@ -113,6 +111,13 @@ module FileListExtension
     end
     self
   end
+
+  protected
+  
+  def action mode = :require
+    self.each{|f| f.handle_file mode}      
+  end
+  
       
 end
 
@@ -120,16 +125,21 @@ module FileString
 
   attr_accessor :location
 
-  def handle_file mode = :require
+  def handle_file mode = nil    
     case mode
+    when Hash
+      puts "#{mode[:display]} '#{self}'" if mode[:display]
+      puts self if !mode[:display]
+    when :display    
+      puts self
     when :display    
       puts self
     when :require
       require self
-    when :get
-      self
+    when :require
+      load self
     else
-      raise ArgumentError, "Mode argument must be :display, :show or :get"
+      self
     end
   end
 
