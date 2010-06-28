@@ -2,10 +2,10 @@ def ruby_files base_path, path, options = {}, &block
   required = Required.new(base_path, path)
   files = []       
   dir = File.dirname path
-  FileUtils.cd dir do             
+  FileUtils.cd dir do |dir|            
     glob = Required.glob(options)
     files = FileList.new(glob) 
-    Required.extend_files(files).extend(FileString)
+    Required.extend_files(files, required.location)
     files.select_ruby_files!
     files.prefix_with_path! required.location
   end
@@ -35,9 +35,14 @@ class Required
     end
   end
   
-  def self.extend_files files
-    files.extend(FileListExtension)
-    files.each{|f| f.extend(FileString)}
+  def self.extend_files files, location
+    files.extend(FileListExtension).location = location 
+    files.map! do |f| 
+      f.extend(FileString)
+      f.location = location
+      f
+    end 
+    files
   end    
   
   protected
@@ -51,10 +56,13 @@ end
 
 module FileListExtension
 
-  def prefix_with_path! location                      
-    
+  attr_accessor :location
+
+  def prefix_with_path! location    
     self.map! do |f| 
-      File.join(location, f).extend(FileString) 
+      f = File.join(location, f).extend(FileString)
+      f.location = location       
+      f
     end
     self          
   end
@@ -76,15 +84,30 @@ module FileListExtension
     self.select! {|f| (f =~ /[^\.]*.rb$/) == 0 }
     self
   end
+
+  def except_folders *reject_folders    
+    self.reject! do |file| 
+      file.matches_any_folder reject_folders
+    end
+    self
+  end
+
   
-  def except *reject_files
+  def except_files *reject_files
     self.reject! do |file| 
       file.matches_any reject_files
     end
     self
   end
 
-  def only *only_files
+  def only_folders *only_folders
+    self.select! do |file| 
+      !file.inside_a_folder? || file.matches_any_folder(only_folders)
+    end
+    self
+  end
+
+  def only_files *only_files
     self.select! do |file| 
       file.matches_any only_files
     end
@@ -94,6 +117,8 @@ module FileListExtension
 end
 
 module FileString  
+
+  attr_accessor :location
 
   def handle_file mode = :require
     case mode
@@ -113,18 +138,40 @@ module FileString
   end  
   
   def matches_any match_files
-    match_files.any? {|match_file| match?(self, match_file)}    
+    match_files.any? {|match_file| match? match_file }    
   end
 
-  def match? file, match_file
+  def matches_any_folder match_folders  
+    match_folders.any? {|match_folder| match_folder? match_folder }
+  end
+
+  def inside_a_folder?
+    return true if (self =~ /#{Regexp.escape(location)}\/(.*?)\//) != nil      
+  end
+
+  protected
+
+  def match? match_file
     case match_file
-    when String 
-      (file =~ /#{Regexp.escape(match_file)}.rb$/) != nil
+    when String
+      (self =~ /#{Regexp.escape(match_file)}.rb$/) != nil
     when Regexp
-      (file =~ match_file) != nil      
+      (self =~ /#{match_file.source}.rb$/) != nil
     else
       raise ArgumentError, "File matcher must be either a String or RegExp"
     end
   end
+
+  def match_folder? match_folder                
+    case match_folder
+    when String
+      (self =~ /#{Regexp.escape(location)}\/#{Regexp.escape(match_folder)}\//) != nil
+    when Regexp
+      (self =~ /#{Regexp.escape(location)}\/#{match_folder.source}\//) != nil
+    else
+      raise ArgumentError, "File matcher must be either a String or RegExp"
+    end
+  end
+
 
 end  

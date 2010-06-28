@@ -6,8 +6,8 @@ class String
   end  
 end
 
-def path dir, file
-  File.join dir, file
+def path *args
+  File.join args
 end
 
 def current_folder
@@ -27,7 +27,7 @@ describe "Required" do
       end
 
       it "should list all 'pure' ruby files except one file" do
-        res = ruby_files('spec', __FILE__).except('except_me')
+        res = ruby_files('spec', __FILE__).except_files('except_me')
         res.should include(path dir, File.basename(__FILE__))
         res.should_not include(path dir, 'not_me.erb.rb')
         res.should_not include(path dir, 'except_me.rb')
@@ -36,7 +36,7 @@ describe "Required" do
 
       it "should list all 'pure' ruby files except one file using block DSL" do
         res = ruby_files('spec', __FILE__) do
-          except('except_me')
+          except_files('except_me')
         end
         res.should include(path dir, File.basename(__FILE__))
         res.should_not include(path dir, 'not_me.erb.rb')
@@ -46,8 +46,8 @@ describe "Required" do
 
       
       it "should list all 'pure' ruby files except two file" do
-        res = ruby_files('spec', __FILE__).except('except_me', 'except_also_me')
-        res2 = ruby_files('spec', __FILE__).except('except_me').except('except_also_me')        
+        res = ruby_files('spec', __FILE__).except_files('except_me', 'except_also_me')
+        res2 = ruby_files('spec', __FILE__).except_files('except_me').except_files('except_also_me')        
         res2.should == res
         res.should include(path dir, File.basename(__FILE__))
         res.should_not include(path dir, 'not_me.erb.rb')
@@ -56,8 +56,8 @@ describe "Required" do
       end
             
       it "should list required files" do
-        res = ruby_files('spec', __FILE__).except('except_me').require_files.require! :get
-        res2 = ruby_files('spec', __FILE__).except('except_me').require_files :get
+        res = ruby_files('spec', __FILE__).except_files('except_me').require_files.require! :get
+        res2 = ruby_files('spec', __FILE__).except_files('except_me').require_files :get
         res2.should == res        
         res.should include(path dir, File.basename(__FILE__).remove_rb)
         res.should_not include(path dir, 'not_me.erb')
@@ -66,11 +66,28 @@ describe "Required" do
       end
 
       it "should list only required files" do
-        res = ruby_files('spec', __FILE__).only(/only/).require_files.require! :get
+        res = ruby_files('spec', __FILE__).only_files(/.*only.*/).require_files.require! :get
         res.should_not include(path dir, File.basename(__FILE__).remove_rb)
         res.should include(path dir, 'only_me')
         res.should_not include(path dir, 'except_me')
         res.should_not include(path dir, 'except_also_me')
+      end
+
+      it "should list all 'pure' ruby files except one subfolder using block DSL" do
+        res = ruby_files('spec', __FILE__, :recursive => :full) do
+          except_folders('not_this_folder')
+        end.require_files.require! :get
+        res.should include(path dir, File.basename(__FILE__).remove_rb)
+        res.should include(path dir, 'this_folder', 'yes_me')
+      end
+
+      it "should list all 'pure' ruby files except one subfolder using block DSL" do
+        res = ruby_files('spec', __FILE__, :recursive => :full) do
+          only_folders('this_folder')
+        end.require_files.require! :get
+        res.should include(path dir, File.basename(__FILE__).remove_rb)
+        res.should include(path dir, 'this_folder', 'yes_me')
+        res.should_not include(path dir, 'not_this_folder', 'sub_not_me')
       end
 
 
