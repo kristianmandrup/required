@@ -62,6 +62,14 @@ module FileListExtension
     end
     self
   end
+
+  def only *only_files
+    self.select! do |file| 
+      file.matches_any only_files
+    end
+    self
+  end
+
      
   protected
 
@@ -90,12 +98,19 @@ module FileString
     self.sub!('.rb', '')
   end  
   
-  def matches_any reject_files
-    reject_files.any? {|reject_file| reject?(self, reject_file)}    
+  def matches_any match_files
+    match_files.any? {|match_file| match?(self, match_file)}    
   end
 
-  def reject? file, reject_file
-    (file =~ /#{Regexp.escape(reject_file)}.rb$/) != nil
+  def match? file, match_file
+    case match_file
+    when String 
+      (file =~ /#{Regexp.escape(match_file)}.rb$/) != nil
+    when Regexp
+      (file =~ match_file) != nil      
+    else
+      raise ArgumentError, "File matcher must be either a String or RegExp"
+    end
   end
 
 end  

@@ -65,6 +65,15 @@ describe "Required" do
         res.should include(path dir, 'except_also_me')
       end
 
+      it "should list only required files" do
+        res = ruby_files('spec', __FILE__).only(/only/).require_files.require! :get
+        res.should_not include(path dir, File.basename(__FILE__).remove_rb)
+        res.should include(path dir, 'only_me')
+        res.should_not include(path dir, 'except_me')
+        res.should_not include(path dir, 'except_also_me')
+      end
+
+
     end    
   end
 end
