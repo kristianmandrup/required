@@ -1,25 +1,27 @@
+require 'stringio'
+
 def ruby_files base_path, path, options = {}, &block
   required = Required.new(base_path, path)
-  orig_stdout = $stdout  
-  $stdout = options[:stdout] if options[:stdout] 
+  stdout = options[:stdout] if options[:stdout]
+  required.stdout = stdout
   files = []       
   dir = File.dirname path
   FileUtils.cd dir do |dir|            
     glob = Required.glob(options)
     files = FileList.new(glob) 
-    Required.extend_files(files, required.location)
+    Required.extend_files(files, required)
     files.select_ruby_files!
     files.prefix_with_path! required.location
   end
   if block
-    files = block.arity < 1 ? files.instance_eval(&block) : block.call(files)
-  end
-  $stdout = orig_stdout
-  files
+    block.arity < 1 ? files.instance_eval(&block) : block.call(files)
+  else
+    files
+  end  
 end
 
 class Required
-  attr_accessor :location
+  attr_accessor :location, :stdout
   
   def initialize base_path, path
     rel_path = relative_path(base_path, path)
@@ -37,11 +39,11 @@ class Required
     end
   end
   
-  def self.extend_files files, location
-    files.extend(FileListExtension).location = location 
+  def self.extend_files files, required
+    files.extend(FileListExtension).required = required 
     files.map! do |f| 
       f.extend(FileString)
-      f.location = location
+      f.required = required
       f
     end 
     files
@@ -58,12 +60,12 @@ end
 
 module FileListExtension
 
-  attr_accessor :location
+  attr_accessor :required
 
   def prefix_with_path! location    
     self.map! do |f| 
       f = File.join(location, f).extend(FileString)
-      f.location = location       
+      f.required = required       
       f
     end
     self          
@@ -123,17 +125,22 @@ end
 
 module FileString  
 
-  attr_accessor :location
+  attr_accessor :required
 
-  def handle_file mode = nil    
+  def handle_file mode = nil
+    stdout = required.stdout    
     case mode
-    when Hash
-      puts "#{mode[:display]} '#{self}'" if mode[:display]
-      puts self if !mode[:display]
+    when Hash      
+      case stdout
+      when StringIO
+        stdout.write display_text(mode)
+      else
+        puts "#{mode[:display]} '#{self}'" if mode[:display]
+        puts self if !mode[:display]  
+      end
+        
     when :display    
-      puts self
-    when :display    
-      puts self
+      stdout.puts self
     when :require
       require self
     when :require
@@ -141,6 +148,10 @@ module FileString
     else
       self
     end
+  end
+
+  def display_text mode
+    mode[:display] ? "#{mode[:display]} '#{self}'\n" : "#{self}\n"    
   end
 
   def remove_rb
@@ -156,7 +167,7 @@ module FileString
   end
 
   def inside_a_folder?
-    return true if (self =~ /#{Regexp.escape(location)}\/(.*?)\//) != nil      
+    return true if (self =~ /#{Regexp.escape(required.location)}\/(.*?)\//) != nil      
   end
 
   protected
@@ -175,9 +186,9 @@ module FileString
   def match_folder? match_folder                
     case match_folder
     when String
-      (self =~ /#{Regexp.escape(location)}\/#{Regexp.escape(match_folder)}\//) != nil
+      (self =~ /#{Regexp.escape(required.location)}\/#{Regexp.escape(match_folder)}\//) != nil
     when Regexp
-      (self =~ /#{Regexp.escape(location)}\/#{match_folder.source}\//) != nil
+      (self =~ /#{Regexp.escape(required.location)}\/#{match_folder.source}\//) != nil
     else
       raise ArgumentError, "File matcher must be either a String or RegExp"
     end
