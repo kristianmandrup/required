@@ -33,17 +33,32 @@ describe "Required" do
         res.should_not include(path dir, 'except_me.rb')
         res.should include(path dir, 'except_also_me.rb') # not in except list
       end
+
+      it "should list all 'pure' ruby files except one file using block DSL" do
+        res = ruby_files('spec', __FILE__) do
+          except('except_me')
+        end
+        res.should include(path dir, File.basename(__FILE__))
+        res.should_not include(path dir, 'not_me.erb.rb')
+        res.should_not include(path dir, 'except_me.rb')
+        res.should include(path dir, 'except_also_me.rb') # not in except list
+      end
+
       
       it "should list all 'pure' ruby files except two file" do
         res = ruby_files('spec', __FILE__).except('except_me', 'except_also_me')
+        res2 = ruby_files('spec', __FILE__).except('except_me').except('except_also_me')        
+        res2.should == res
         res.should include(path dir, File.basename(__FILE__))
         res.should_not include(path dir, 'not_me.erb.rb')
         res.should_not include(path dir, 'except_me.rb')
         res.should_not include(path dir, 'except_also_me.rb')
       end
             
-      it "should list" do
+      it "should list required files" do
         res = ruby_files('spec', __FILE__).except('except_me').require_files.require! :get
+        res2 = ruby_files('spec', __FILE__).except('except_me').require_files :get
+        res2.should == res        
         res.should include(path dir, File.basename(__FILE__).remove_rb)
         res.should_not include(path dir, 'not_me.erb')
         res.should_not include(path dir, 'except_me')

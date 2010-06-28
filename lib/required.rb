@@ -1,12 +1,16 @@
-def ruby_files base_path, path
+def ruby_files base_path, path, &block
   location = Required.new(base_path, path).location
   files = []
   FileUtils.cd location do
     files = FileList.new('**/*.rb') 
     Required.extend_files(files).extend(FileString)
     files.select_ruby_files!
-  end
-  files
+  end 
+  if block
+    block.arity < 1 ? files.instance_eval(&block) : block.call(files)
+  else
+    files
+  end    
 end
 
 class Required
@@ -38,9 +42,13 @@ module FileListExtension
     end       
   end
 
-  def require_files
+  def require_files mode = nil
     self.map!{|f| f.remove_rb }
-    self
+    if mode
+      self.require! mode
+    else
+      self
+    end
   end
 
   def select_ruby_files!
