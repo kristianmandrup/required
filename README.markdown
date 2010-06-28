@@ -1,4 +1,4 @@
-# Required
+# Require DSL
 
 Handle load and require ruby files using a nice DSL.
 
