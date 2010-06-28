@@ -1,9 +1,11 @@
-$LOAD_PATH.unshift(File.dirname(__FILE__))
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
-require 'required'
-require 'spec'
-require 'spec/autorun'
+require 'rspec'
+require 'rspec/autorun'
 
-Spec::Runner.configure do |config|
-  
+require 'rake'
+require 'fileutils'
+
+require 'required'
+
+RSpec.configure do |config|
+#  config.include(Matchers)  
 end
