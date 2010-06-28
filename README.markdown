@@ -4,11 +4,11 @@ Handle load and require ruby files using a nice DSL.
 
 ## Install
 
-<code>gem install required</code>
+<code>gem install require-dsl</code>
 
 ## Usage
 
-<code>require 'required'</code>
+<code>require 'require-dsl'</code>
 
 ## Using the DSL
 
