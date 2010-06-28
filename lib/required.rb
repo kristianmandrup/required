@@ -29,7 +29,7 @@ class Required
     when :full
       '**/*.rb'    
     when :single
-      '*/*.rb'
+      ['*/*.rb', '*.rb']
     else
       '*.rb'
     end

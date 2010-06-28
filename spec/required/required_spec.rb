@@ -20,10 +20,26 @@ describe "Required" do
   
   context "current folder: #{current_folder}"  do
     describe '#' do
-      it "should list all 'pure' ruby files" do
+      it "should list all 'pure' ruby files, , none recursive" do
         res = ruby_files('spec', __FILE__)
+        res2 = ruby_files('spec', __FILE__, :recursive => :none) 
+        res.should == res2
         res.should include(path dir, File.basename(__FILE__) )
         res.should_not include(path dir, 'not_me.erb.rb' )
+        res.should_not include(path dir, 'not_this_folder', 'sub_not_me.rb' )
+        res.should_not include(path dir, 'this_folder', 'yes_me.rb' )
+        res.should_not include(path dir, 'this_folder', 'subsub', 'a_sub_sub_file.rb' )
+      end
+
+      it "should list all 'pure' ruby files, full recursive" do
+        res = ruby_files('spec', __FILE__, :recursive => :full)
+        res.should include(path dir, 'this_folder', 'subsub', 'a_sub_sub_file.rb' )
+      end
+
+      it "should list all 'pure' ruby files, single recursive" do
+        res = ruby_files('spec', __FILE__, :recursive => :single)
+        res.should include(path dir, File.basename(__FILE__) )
+        res.should_not include(path dir, 'this_folder', 'subsub', 'a_sub_sub_file.rb' )
       end
 
       it "should list all 'pure' ruby files except one file" do
